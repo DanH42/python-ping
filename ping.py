@@ -2,17 +2,9 @@
 # coding: utf-8
 
 """
-	A pure python ping implementation using raw sockets.
-
-	Note that ICMP messages can only be send from processes running as root
-	(in Windows, you must run this script as 'Administrator').
-
-	Bugs are naturally mine. I'd be glad to hear about them. There are
-	certainly word - size dependencies here.
-	
-	:homepage: https://github.com/jedie/python-ping/
-	:copyleft: 1989-2011 by the python-ping team, see AUTHORS for more details.
-	:license: GNU GPL v2, see LICENSE for more details.
+	Based on https://github.com/jedie/python-ping/
+	python-ping team: http://raw.github.com/jedie/python-ping/master/AUTHORS
+	Licensed GNU GPL v2, see http://raw.github.com/jedie/python-ping/master/LICENSE
 """
 
 
@@ -24,6 +16,7 @@ import socket
 import struct
 import sys
 import time
+import json
 
 
 if sys.platform.startswith("win32"):
@@ -88,6 +81,7 @@ def to_ip(addr):
 
 class Ping(object):
 	def __init__(self, destination, timeout=1000, packet_size=55, own_id=None):
+		self.log = open("ping.json", "a")
 		self.destination = destination
 		self.timeout = timeout
 		self.packet_size = packet_size
@@ -129,13 +123,23 @@ class Ping(object):
 		print("%d bytes from %s: icmp_seq=%d ttl=%d time=%.1f ms" % (
 			packet_size, from_info, icmp_header["seq_number"], ip_header["ttl"], delay)
 		)
+		
+		self.log.write(json.dumps({#"bytes": packet_size,
+		                           # "from": from_info,
+		                           #  "num": icmp_header["seq_number"],
+		                            "time": int(round(default_timer())),
+		                           "delay": int(round(delay))}) + "\n")
+		
 		#print("IP header: %r" % ip_header)
 		#print("ICMP header: %r" % icmp_header)
 
 	def print_failed(self):
 		print("Request timed out.")
+		self.log.write(json.dumps({"time": default_timer(),
+		                        "timeout": True}) + "\n")
 
 	def print_exit(self):
+		self.log.close()
 		print("\n----%s PYTHON PING Statistics----" % (self.destination))
 
 		lost_count = self.send_count - self.receive_count
@@ -326,7 +330,7 @@ class Ping(object):
 				return None, 0, 0, 0, 0
 
 
-def verbose_ping(hostname, timeout=1000, count=3, packet_size=55):
+def verbose_ping(hostname, timeout=1000, count=None, packet_size=55):
 	p = Ping(hostname, timeout, packet_size)
 	p.run(count)
 
@@ -334,24 +338,7 @@ def verbose_ping(hostname, timeout=1000, count=3, packet_size=55):
 if __name__ == '__main__':
 	# FIXME: Add a real CLI
 	if len(sys.argv) == 1:
-		print "DEMO"
-
-		# These should work:
-		verbose_ping("heise.de")
-		verbose_ping("google.com")
-
-		# Inconsistent on Windows w/ ActivePython (Python 3.2 resolves correctly
-		# to the local host, but 2.7 tries to resolve to the local *gateway*)
-		verbose_ping("localhost")
-
-		# Should fail with 'getaddrinfo print_failed':
-		verbose_ping("foobar_url.foobar")
-
-		# Should fail (timeout), but it depends on the local network:
-		verbose_ping("192.168.255.254")
-
-		# Should fails with 'The requested address is not valid in its context':
-		verbose_ping("0.0.0.0")
+		verbose_ping("199.192.201.82")
 	elif len(sys.argv) == 2:
 		verbose_ping(sys.argv[1])
 	else:
