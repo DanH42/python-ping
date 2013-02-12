@@ -81,7 +81,6 @@ def to_ip(addr):
 
 class Ping(object):
 	def __init__(self, destination, timeout=1000, packet_size=55, own_id=None):
-		self.log = open("ping.json", "a")
 		self.destination = destination
 		self.timeout = timeout
 		self.packet_size = packet_size
@@ -107,6 +106,11 @@ class Ping(object):
 
 	#--------------------------------------------------------------------------
 
+	def log(self, string):
+		handle = open("ping.txt", "a")
+		handle.write(str(int(round(default_timer()))) + ',' + string + "\n")
+		handle.close()
+
 	def print_start(self):
 		print("\nPYTHON-PING %s (%s): %d data bytes" % (self.destination, self.dest_ip, self.packet_size))
 
@@ -124,22 +128,16 @@ class Ping(object):
 			packet_size, from_info, icmp_header["seq_number"], ip_header["ttl"], delay)
 		)
 		
-		self.log.write(json.dumps({#"bytes": packet_size,
-		                           # "from": from_info,
-		                           #  "num": icmp_header["seq_number"],
-		                            "time": int(round(default_timer())),
-		                           "delay": int(round(delay))}) + "\n")
+		self.log(str(int(round(delay))) + ",0")
 		
 		#print("IP header: %r" % ip_header)
 		#print("ICMP header: %r" % icmp_header)
 
 	def print_failed(self):
 		print("Request timed out.")
-		self.log.write(json.dumps({"time": default_timer(),
-		                        "timeout": True}) + "\n")
+		self.log("0,1000")
 
 	def print_exit(self):
-		self.log.close()
 		print("\n----%s PYTHON PING Statistics----" % (self.destination))
 
 		lost_count = self.send_count - self.receive_count
